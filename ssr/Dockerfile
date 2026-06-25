@@ -5,11 +5,11 @@ FROM ghcr.io/voidzero-dev/vite-plus:1 AS build
 WORKDIR /app
 
 # Install dependencies first so this layer is cached across source changes.
-COPY package.json pnpm-lock.yaml .node-version ./
+COPY --chown=vp:vp package.json pnpm-lock.yaml .node-version ./
 RUN vp install --frozen-lockfile
 
 # Build. vp reads .node-version and provisions that exact Node.js automatically.
-COPY . .
+COPY --chown=vp:vp . .
 RUN vp build
 
 # Export the exact resolved Node.js binary for the runtime stage.
@@ -21,7 +21,7 @@ RUN cp "$(vp env which node | head -1)" /tmp/node
 # the build stage would NOT prune already-installed devDependencies.
 FROM ghcr.io/voidzero-dev/vite-plus:1 AS deps
 WORKDIR /app
-COPY package.json pnpm-lock.yaml .node-version ./
+COPY --chown=vp:vp package.json pnpm-lock.yaml .node-version ./
 RUN vp install --frozen-lockfile --prod
 
 # --- runtime stage: small, glibc, no vp ---
