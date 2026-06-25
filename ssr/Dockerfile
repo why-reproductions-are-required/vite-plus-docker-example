@@ -12,9 +12,17 @@ RUN vp install --frozen-lockfile
 COPY . .
 RUN vp build
 
-# Stage production-only dependencies and the exact resolved Node.js binary.
-RUN vp install --frozen-lockfile --prod \
- && cp "$(vp env which node | head -1)" /tmp/node
+# Export the exact resolved Node.js binary for the runtime stage.
+RUN cp "$(vp env which node | head -1)" /tmp/node
+
+# --- deps stage: production-only dependencies ---
+# A separate, fresh `--prod` install so devDependencies (including the large
+# vite-plus toolchain) are excluded. Running `--prod` over the full install in
+# the build stage would NOT prune already-installed devDependencies.
+FROM ghcr.io/voidzero-dev/vite-plus:1 AS deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml .node-version ./
+RUN vp install --frozen-lockfile --prod
 
 # --- runtime stage: small, glibc, no vp ---
 FROM debian:bookworm-slim AS runtime
@@ -25,7 +33,7 @@ ENV NODE_ENV=production
 COPY --from=build /tmp/node /usr/local/bin/node
 
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
 
 USER nobody

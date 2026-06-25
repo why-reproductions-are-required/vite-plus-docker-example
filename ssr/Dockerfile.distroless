@@ -1,21 +1,23 @@
 # syntax=docker/dockerfile:1
 #
 # Distroless variant of the SSR runtime (see docs/guide/docker.md "Smaller still"
-# tip). Same build stage as Dockerfile; only the runtime base differs:
+# tip). Same build/deps stages as Dockerfile; only the runtime base differs:
 # gcr.io/distroless/cc is glibc-based (so the copied Node.js binary works),
 # ships no shell or package manager, and runs as a non-root user.
 
 FROM ghcr.io/voidzero-dev/vite-plus:1 AS build
 WORKDIR /app
-
 COPY package.json pnpm-lock.yaml .node-version ./
 RUN vp install --frozen-lockfile
-
 COPY . .
 RUN vp build
+RUN cp "$(vp env which node | head -1)" /tmp/node
 
-RUN vp install --frozen-lockfile --prod \
- && cp "$(vp env which node | head -1)" /tmp/node
+# Production-only dependencies (fresh --prod so devDependencies are excluded).
+FROM ghcr.io/voidzero-dev/vite-plus:1 AS deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml .node-version ./
+RUN vp install --frozen-lockfile --prod
 
 # --- runtime stage: distroless, glibc, no shell, non-root ---
 FROM gcr.io/distroless/cc AS runtime
@@ -24,7 +26,7 @@ ENV NODE_ENV=production
 
 COPY --from=build /tmp/node /usr/local/bin/node
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
 
 USER nonroot
