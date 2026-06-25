@@ -49,3 +49,22 @@ jobs:
           done
           echo "Response:"; cat /tmp/spa.html
           grep -q "vp docker spa" /tmp/spa.html
+
+      - name: Report image sizes
+        if: always()
+        run: |
+          {
+            echo "## Docker image sizes"
+            echo ""
+            echo "| Image | Role | Size |"
+            echo "| --- | --- | --- |"
+            printf '| `%s` | %s | %s |\n' \
+              "ghcr.io/voidzero-dev/vite-plus:1" "toolchain (build stage only)" \
+              "$(docker images ghcr.io/voidzero-dev/vite-plus --format '{{.Size}}' | head -1)"
+            printf '| `%s` | %s | %s |\n' \
+              "vp-ssr-example" "SSR runtime" \
+              "$(docker images vp-ssr-example --format '{{.Size}}' | head -1)"
+            printf '| `%s` | %s | %s |\n' \
+              "vp-spa-example" "SPA runtime (nginx)" \
+              "$(docker images vp-spa-example --format '{{.Size}}' | head -1)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
