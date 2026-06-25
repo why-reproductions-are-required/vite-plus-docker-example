@@ -10,7 +10,7 @@ jobs:
     name: Build and smoke-test Docker examples
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # The official ghcr.io/voidzero-dev/vite-plus image is not published yet,
       # so build the toolchain image the examples reference. Replace this with
