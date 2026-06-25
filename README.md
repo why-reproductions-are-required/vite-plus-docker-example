@@ -14,6 +14,9 @@ toolchain image builds the app, and the exact Node.js resolved from
   the **exact** Node.js binary from `.node-version` is copied into a slim
   `debian:bookworm-slim` runtime stage that runs `node dist/server.js`. No `vp`
   in the runtime image.
+  - [`ssr/Dockerfile.distroless`](./ssr/Dockerfile.distroless) — same app on a
+    `gcr.io/distroless/cc` runtime (shell-less, non-root), built alongside for a
+    size comparison.
 - [`spa/`](./spa) — static SPA. The build stage runs `vp build`; the output is
   served by `nginx:alpine`. No Node.js at runtime.
 
@@ -28,6 +31,8 @@ The `Dockerfile` in each directory is copied verbatim from the Vite+ docs.
 2. Builds each example image.
 3. Runs each container and asserts `HTTP 200`, plus, for SSR, that the runtime
    Node.js version equals the pinned `.node-version` (`24.15.0`).
+4. Reports each image's size in the run summary (debian-slim vs distroless SSR
+   runtime, plus the SPA runtime and the toolchain image).
 
 ### Note on the base image
 

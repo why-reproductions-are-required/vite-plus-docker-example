@@ -36,6 +36,24 @@ jobs:
           echo "Runtime Node.js: $node_version"
           test "$node_version" = "v$(cat ssr/.node-version)"
 
+      - name: Build SSR (distroless) example image
+        run: docker build -f ssr/Dockerfile.distroless -t vp-ssr-distroless ./ssr
+
+      - name: Smoke-test SSR (distroless) example
+        run: |
+          cid=$(docker run -d -p 3001:3000 vp-ssr-distroless)
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 20); do
+            if curl -fsS http://localhost:3001/ >/tmp/ssr-distroless.txt 2>/dev/null; then break; fi
+            sleep 1
+          done
+          echo "Response:"; cat /tmp/ssr-distroless.txt
+          grep -q "vite-plus docker SSR example OK" /tmp/ssr-distroless.txt
+          # distroless has no shell; exec the node binary directly.
+          node_version=$(docker exec "$cid" /usr/local/bin/node --version)
+          echo "Runtime Node.js: $node_version"
+          test "$node_version" = "v$(cat ssr/.node-version)"
+
       - name: Build SPA example image
         run: docker build -t vp-spa-example ./spa
 
@@ -62,8 +80,11 @@ jobs:
               "ghcr.io/voidzero-dev/vite-plus:1" "toolchain (build stage only)" \
               "$(docker images ghcr.io/voidzero-dev/vite-plus --format '{{.Size}}' | head -1)"
             printf '| `%s` | %s | %s |\n' \
-              "vp-ssr-example" "SSR runtime" \
+              "vp-ssr-example" "SSR runtime (debian-slim)" \
               "$(docker images vp-ssr-example --format '{{.Size}}' | head -1)"
+            printf '| `%s` | %s | %s |\n' \
+              "vp-ssr-distroless" "SSR runtime (distroless)" \
+              "$(docker images vp-ssr-distroless --format '{{.Size}}' | head -1)"
             printf '| `%s` | %s | %s |\n' \
               "vp-spa-example" "SPA runtime (nginx)" \
               "$(docker images vp-spa-example --format '{{.Size}}' | head -1)"
