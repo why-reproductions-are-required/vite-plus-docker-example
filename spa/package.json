@@ -1,0 +1,15 @@
+{
+  "name": "spa-example",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "vite-plus": "0.2.1"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.9.0",
+      "onFail": "download"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+name: Verify docs examples
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Build and smoke-test Docker examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The official ghcr.io/voidzero-dev/vite-plus image is not published yet,
+      # so build the toolchain image the examples reference. Replace this with
+      # `docker pull ghcr.io/voidzero-dev/vite-plus:1` once it is published.
+      - name: Build Vite+ toolchain base image
+        run: docker build -f base.Dockerfile -t ghcr.io/voidzero-dev/vite-plus:1 .
+
+      - name: Build SSR example image
+        run: docker build -t vp-ssr-example ./ssr
+
+      - name: Smoke-test SSR example
+        run: |
+          cid=$(docker run -d -p 3000:3000 vp-ssr-example)
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 20); do
+            if curl -fsS http://localhost:3000/ >/tmp/ssr.txt 2>/dev/null; then break; fi
+            sleep 1
+          done
+          echo "Response:"; cat /tmp/ssr.txt
+          grep -q "vite-plus docker SSR example OK" /tmp/ssr.txt
+          # The runtime Node.js must match the pinned .node-version exactly.
+          node_version=$(docker exec "$cid" /usr/local/bin/node --version)
+          echo "Runtime Node.js: $node_version"
+          test "$node_version" = "v$(cat ssr/.node-version)"
+
+      - name: Build SPA example image
+        run: docker build -t vp-spa-example ./spa
+
+      - name: Smoke-test SPA example
+        run: |
+          cid=$(docker run -d -p 8080:80 vp-spa-example)
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 20); do
+            if curl -fsS http://localhost:8080/ >/tmp/spa.html 2>/dev/null; then break; fi
+            sleep 1
+          done
+          echo "Response:"; cat /tmp/spa.html
+          grep -q "vp docker spa" /tmp/spa.html
