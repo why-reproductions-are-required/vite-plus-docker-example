@@ -18,6 +18,9 @@ jobs:
       - name: Build Vite+ toolchain base image
         run: docker build -f base.Dockerfile -t ghcr.io/voidzero-dev/vite-plus:1 .
 
+      - name: Build Vite+ toolchain base image (Alpine)
+        run: docker build -f base.Dockerfile.alpine -t ghcr.io/voidzero-dev/vite-plus:1-alpine .
+
       - name: Build SSR example image
         run: docker build -t vp-ssr-example ./ssr
 
@@ -54,6 +57,24 @@ jobs:
           echo "Runtime Node.js: $node_version"
           test "$node_version" = "v$(cat ssr/.node-version)"
 
+      - name: Build SSR (Alpine) example image
+        run: docker build -f ssr/Dockerfile.alpine -t vp-ssr-alpine ./ssr
+
+      - name: Smoke-test SSR (Alpine) example
+        run: |
+          cid=$(docker run -d -p 3002:3000 vp-ssr-alpine)
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 20); do
+            if curl -fsS http://localhost:3002/ >/tmp/ssr-alpine.txt 2>/dev/null; then break; fi
+            sleep 1
+          done
+          echo "Response:"; cat /tmp/ssr-alpine.txt
+          grep -q "vite-plus docker SSR example OK" /tmp/ssr-alpine.txt
+          # Alpine runtime has no shell; exec the node binary directly.
+          node_version=$(docker exec "$cid" /usr/local/bin/node --version)
+          echo "Runtime Node.js: $node_version"
+          test "$node_version" = "v$(cat ssr/.node-version)"
+
       - name: Build SPA example image
         run: docker build -t vp-spa-example ./spa
 
@@ -77,14 +98,20 @@ jobs:
             echo "| Image | Role | Size |"
             echo "| --- | --- | --- |"
             printf '| `%s` | %s | %s |\n' \
-              "ghcr.io/voidzero-dev/vite-plus:1" "toolchain (build stage only)" \
-              "$(docker images ghcr.io/voidzero-dev/vite-plus --format '{{.Size}}' | head -1)"
+              "ghcr.io/voidzero-dev/vite-plus:1" "toolchain (debian, build only)" \
+              "$(docker images ghcr.io/voidzero-dev/vite-plus:1 --format '{{.Size}}' | head -1)"
+            printf '| `%s` | %s | %s |\n' \
+              "ghcr.io/voidzero-dev/vite-plus:1-alpine" "toolchain (alpine, build only)" \
+              "$(docker images ghcr.io/voidzero-dev/vite-plus:1-alpine --format '{{.Size}}' | head -1)"
             printf '| `%s` | %s | %s |\n' \
               "vp-ssr-example" "SSR runtime (debian-slim)" \
               "$(docker images vp-ssr-example --format '{{.Size}}' | head -1)"
             printf '| `%s` | %s | %s |\n' \
               "vp-ssr-distroless" "SSR runtime (distroless)" \
               "$(docker images vp-ssr-distroless --format '{{.Size}}' | head -1)"
+            printf '| `%s` | %s | %s |\n' \
+              "vp-ssr-alpine" "SSR runtime (alpine/musl)" \
+              "$(docker images vp-ssr-alpine --format '{{.Size}}' | head -1)"
             printf '| `%s` | %s | %s |\n' \
               "vp-spa-example" "SPA runtime (nginx)" \
               "$(docker images vp-spa-example --format '{{.Size}}' | head -1)"

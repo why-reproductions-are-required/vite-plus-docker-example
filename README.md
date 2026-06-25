@@ -17,6 +17,9 @@ toolchain image builds the app, and the exact Node.js resolved from
   - [`ssr/Dockerfile.distroless`](./ssr/Dockerfile.distroless) — same app on a
     `gcr.io/distroless/cc` runtime (shell-less, non-root), built alongside for a
     size comparison.
+  - [`ssr/Dockerfile.alpine`](./ssr/Dockerfile.alpine) — same app built with the
+    Alpine (musl) toolchain image and run on an Alpine runtime (smallest, but
+    musl: unsigned Node, native-addon caveats).
 - [`spa/`](./spa) — static SPA. The build stage runs `vp build`; the output is
   served by `nginx:alpine`. No Node.js at runtime.
 

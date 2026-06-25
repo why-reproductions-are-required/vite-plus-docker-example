@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+#
+# Alpine (musl) SSR example: built with the Alpine toolchain image and run on an
+# Alpine runtime. The musl Node.js binary only runs on a musl base, so the
+# runtime stage is alpine (not debian/distroless).
+
+FROM ghcr.io/voidzero-dev/vite-plus:1-alpine AS build
+WORKDIR /app
+COPY package.json pnpm-lock.yaml .node-version ./
+RUN vp install --frozen-lockfile
+COPY . .
+RUN vp build
+RUN cp "$(vp env which node | head -1)" /tmp/node
+
+FROM ghcr.io/voidzero-dev/vite-plus:1-alpine AS deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml .node-version ./
+RUN vp install --frozen-lockfile --prod
+
+FROM alpine:3.21 AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+# musl Node.js needs libstdc++ / libgcc at runtime.
+RUN apk add --no-cache libstdc++
+COPY --from=build /tmp/node /usr/local/bin/node
+COPY --from=build /app/dist ./dist
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./
+USER nobody
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
