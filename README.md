@@ -22,6 +22,8 @@ toolchain image builds the app, and the exact Node.js resolved from
     musl: unsigned Node, native-addon caveats).
 - [`spa/`](./spa) — static SPA. The build stage runs `vp build`; the output is
   served by `nginx:alpine`. No Node.js at runtime.
+  - [`spa/Dockerfile.alpine`](./spa/Dockerfile.alpine) — same SPA built with the
+    Alpine toolchain image (output and runtime are identical to the Debian build).
 
 The `Dockerfile` in each directory is copied verbatim from the Vite+ docs.
 

@@ -89,6 +89,20 @@ jobs:
           echo "Response:"; cat /tmp/spa.html
           grep -q "vp docker spa" /tmp/spa.html
 
+      - name: Build SPA (Alpine) example image
+        run: docker build -f spa/Dockerfile.alpine -t vp-spa-alpine ./spa
+
+      - name: Smoke-test SPA (Alpine) example
+        run: |
+          cid=$(docker run -d -p 8081:80 vp-spa-alpine)
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 20); do
+            if curl -fsS http://localhost:8081/ >/tmp/spa-alpine.html 2>/dev/null; then break; fi
+            sleep 1
+          done
+          echo "Response:"; cat /tmp/spa-alpine.html
+          grep -q "vp docker spa" /tmp/spa-alpine.html
+
       - name: Report image sizes
         if: always()
         run: |
@@ -113,6 +127,9 @@ jobs:
               "vp-ssr-alpine" "SSR runtime (alpine/musl)" \
               "$(docker images vp-ssr-alpine --format '{{.Size}}' | head -1)"
             printf '| `%s` | %s | %s |\n' \
-              "vp-spa-example" "SPA runtime (nginx)" \
+              "vp-spa-example" "SPA runtime (nginx, debian toolchain)" \
               "$(docker images vp-spa-example --format '{{.Size}}' | head -1)"
+            printf '| `%s` | %s | %s |\n' \
+              "vp-spa-alpine" "SPA runtime (nginx, alpine toolchain)" \
+              "$(docker images vp-spa-alpine --format '{{.Size}}' | head -1)"
           } | tee -a "$GITHUB_STEP_SUMMARY"

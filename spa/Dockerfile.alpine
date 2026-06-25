@@ -1,0 +1,15 @@
+# syntax=docker/dockerfile:1
+#
+# Alpine (musl) SPA example: built with the Alpine toolchain image. A static SPA
+# needs no Node.js at runtime, so the output is identical to the Debian build;
+# only the builder image differs. Served by nginx:alpine.
+
+FROM ghcr.io/voidzero-dev/vite-plus:1-alpine AS build
+WORKDIR /app
+COPY package.json pnpm-lock.yaml .node-version ./
+RUN vp install --frozen-lockfile
+COPY . .
+RUN vp build
+
+FROM nginx:alpine AS runtime
+COPY --from=build /app/dist /usr/share/nginx/html
