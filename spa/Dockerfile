@@ -1,6 +1,6 @@
 FROM ghcr.io/voidzero-dev/vite-plus:1 AS build
 WORKDIR /app
-COPY --chown=vp:vp package.json pnpm-lock.yaml ./
+COPY --chown=vp:vp package.json pnpm-lock.yaml .node-version* ./
 RUN vp install --frozen-lockfile
 COPY --chown=vp:vp . .
 RUN vp build
